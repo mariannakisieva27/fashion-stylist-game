@@ -16,7 +16,7 @@ class Garment:
 class Dress(Garment):
     def __init__(self, style, color, price, length):
         super().__init__("платье", style, color, price)
-        self.length = length  # Дополнительное свойство для платья
+        self.length = length  
 
 class Model:
     def __init__(self, name):
@@ -25,10 +25,20 @@ class Model:
 
     def wear_item(self, item):
         self.outfit.append(item)
-        print(f"{self.name} надел(а) {item.type}")
+        print(f"{self.name} надел(а) {item.type} ({item.style}, {item.color})")
 
     def walk_runway(self):
+        if not self.outfit:
+            print(f"{self.name} не в чем идти на подиум!")
+            return
         print(f"{self.name} идет по подиуму в наряде: {', '.join([item.type for item in self.outfit])}")
+
+    def remove_item(self, item):
+        if item in self.outfit:
+            self.outfit.remove(item)
+            print(f"{self.name} снял(а) {item.type} ({item.style}, {item.color})")
+        else:
+            print(f"На {self.name} нет {item.type}")
 
 class Jury:
     def __init__(self, preferences):
@@ -38,8 +48,9 @@ class Jury:
         score = 0
         for item in outfit:
             for pref in self.preferences:
-                if item.style == pref['style'] and item.color == pref['color']:
-                    score += 10
+                style_bonus = 10 if item.style == pref['style'] else 0
+                color_bonus = 5 if item.color == pref['color'] else 0 
+                score += style_bonus + color_bonus  
         return score
 
 class Shop:
@@ -50,32 +61,94 @@ class Shop:
         self.items.append(item)
 
     def display_items(self):
-        for item in self.items:
-            print(f"{item.type} ({item.style}, {item.color}) - {item.price} монет")
+        print("Доступные предметы:")
+        for i, item in enumerate(self.items):
+            print(f"{i+1}. {item.type} ({item.style}, {item.color}) - {item.price} монет")
+
+    def buy_item(self, item_index):
+        try:
+            item = self.items[item_index - 1]
+            print(f"Вы купили {item.type} ({item.style}, {item.color})")
+            return item
+        except IndexError:
+            print("Неверный номер предмета.")
+            return None
+        except TypeError:
+            print("Введите номер предмета, а не текст")
+            return None
 
 class GameManager:
-    def __init__(self):
-        self.model = Model("Анна")
-        self.jury = Jury([{'style': 'классика', 'color': 'черный'}])
+    def __init__(self, model_name="Анна"):
+        self.model = Model(model_name)
+        self.jury = Jury([{'style': 'классика', 'color': 'черный'},
+                          {'style': 'бохо', 'color': 'коричневый'}]) 
         self.shop = Shop()
 
     def start_game(self):
         print("Добро пожаловать в Fashion Stylist: Runway Challenge!")
         self.shop.add_item(Dress("классика", "черный", 100, "длинное"))
         self.shop.add_item(Dress("бохо", "зеленый", 80, "короткое"))
-        self.shop.display_items()
+        self.shop.add_item(Garment("блузка", "классика", "белый", 60))
+        self.shop.add_item(Garment("брюки", "классика", "черный", 90))
+        self.shop.add_item(Garment("шляпа", "бохо", "коричневый", 40)) #Больше предметов
 
-        # Пример покупки и надевания платья
-        dress = self.shop.items[0]
-        self.model.wear_item(dress)
+        while True:
+            self.shop.display_items()
 
-        # Показ на подиуме
-        self.model.walk_runway()
+            choice = input(f"Что вы хотите сделать? (купить [номер], надеть [номер], снять [номер], подиум, выход): ")
+            parts = choice.split()
 
-        # Оценка жюри
-        score = self.jury.rate_outfit(self.model.outfit)
-        print(f"Жюри оценило наряд на {score} баллов!")
+            if not parts:
+                continue
 
-if name == "__main__":
-    game = GameManager()
+            action = parts[0].lower()
+
+            if action == "купить":
+                try:
+                    item_index = int(parts[1])
+                    item = self.shop.buy_item(item_index)
+                    if item:
+                        wear_choice = input(f"Надеть {item.type} сейчас? (да/нет): ").lower()
+                        if wear_choice == "да":
+                            self.model.wear_item(item)
+                except (IndexError, ValueError):
+                    print("Пожалуйста, введите номер предмета после 'купить'.")
+            elif action == "надеть":
+                try:
+                    item_index = int(parts[1])
+                    if 1 <= item_index <= len(self.shop.items):
+                        item = self.shop.items[item_index-1]
+                        self.model.wear_item(item)
+                    else:
+                        print("Неверный номер предмета.")
+
+
+                except (IndexError, ValueError):
+                    print("Пожалуйста, введите номер предмета после 'надеть'.")
+
+            elif action == "снять":
+                try:
+                    item_index = int(parts[1])
+                    if 1 <= item_index <= len(self.shop.items):
+                        item = self.shop.items[item_index-1]
+                        self.model.remove_item(item)
+                    else:
+                        print("Неверный номер предмета.")
+
+                except (IndexError, ValueError):
+                    print("Пожалуйста, введите номер предмета после 'снять'.")
+            elif action == "подиум":
+                self.model.walk_runway()
+                score = self.jury.rate_outfit(self.model.outfit)
+                print(f"Жюри оценило наряд на {score} баллов!")
+            elif action == "выход":
+                print("Спасибо за игру!")
+                break
+            else:
+                print("Неверная команда. Попробуйте 'купить', 'надеть', 'снять', 'подиум' или 'выход'.")
+
+
+if __name__ == "__main__":
+    game = GameManager("Ирина") #Можно выбрать имя модели
     game.start_game()
+
